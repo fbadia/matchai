@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, validator
 from supabase import create_client
@@ -34,9 +34,22 @@ def generate_combined_hash(cv_text: str, job_text: str) -> str:
     combined = normalize_text(cv_text) + "|||" + normalize_text(job_text)
     return hashlib.sha256(combined.encode('utf-8')).hexdigest()
 
-# Mock para Dependência de Auth e chamada Gemini
-def get_current_user():
-    return {"id": "mock-user-id"}
+# Validação real de Auth via Supabase
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token de autorização ausente ou inválido")
+    
+    token = authorization.split(" ")[1]
+    if "SUPABASE_URL" not in os.environ or "SUPABASE_SERVICE_ROLE_KEY" not in os.environ:
+        raise HTTPException(status_code=500, detail="Serviço indisponível. Variáveis de ambiente ausentes.")
+    
+    supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
+    
+    user_res = supabase.auth.get_user(token)
+    if not user_res or not user_res.user:
+        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+        
+    return {"id": user_res.user.id}
 
 async def call_gemini_premium(cv_text: str, job_text: str):
     return {

@@ -74,9 +74,16 @@ export default function Dashboard() {
 
         {/* Action Area */}
         <div className="mt-8 flex flex-col items-center gap-3">
+          {error && (
+            <div className="w-full max-w-lg mb-4 flex items-center gap-2 bg-red-900/50 border border-red-800 text-red-400 text-body p-4 rounded-md">
+              <AlertCircle size={18} className="flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {balance > 0 ? (
             <>
-              <Button variant="primary" className="w-[280px]" onClick={handleAnalyze}>
+              <Button variant="primary" className="w-[280px]" onClick={handleAnalyze} disabled={loading || !cvText || !jobText}>
                 <Zap size={16} />
                 Analisar agora
               </Button>

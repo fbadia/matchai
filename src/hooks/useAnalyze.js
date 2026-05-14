@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+
+const API_URL = 'https://matchai-qber.onrender.com';
 
 export function useAnalyze() {
   const [loading, setLoading] = useState(false);
@@ -11,20 +14,43 @@ export function useAnalyze() {
     setError(null);
 
     try {
-      // MOCK DA CHAMADA A API (Simulando 3 segundos de espera)
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Simulação de cache hit (50% de chance) para testes visuais
-      const fromCache = Math.random() > 0.5;
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
 
-      const response = {
-        from_cache: fromCache,
-        cached_at: fromCache ? new Date().toISOString() : undefined,
-        score_geral: 74,
-      };
+      const res = await fetch(`${API_URL}/api/analyze/premium`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          cv_text: cvText,
+          job_text: jobText
+        })
+      });
 
-      // Redireciona com o estado de from_cache para que a tela ResultPremium possa exibir o Toast
-      navigate('/resultado?tier=premium', { state: { from_cache: response.from_cache, cached_at: response.cached_at } });
+      if (!res.ok) {
+        let errorMsg = 'Erro na comunicação com o servidor.';
+        try {
+          const errData = await res.json();
+          if (errData.detail) errorMsg = errData.detail;
+          else if (errData.error) errorMsg = errData.error;
+        } catch(e) {}
+        throw new Error(errorMsg);
+      }
+
+      const response = await res.json();
+
+      if (response.error) {
+         throw new Error(response.error);
+      }
+
+      navigate('/resultado?tier=premium', { 
+        state: { 
+          from_cache: response.from_cache, 
+          cached_at: response.cached_at 
+        } 
+      });
       
       return response;
     } catch (err) {

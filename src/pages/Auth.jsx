@@ -1,27 +1,63 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { LogIn, UserPlus, Eye, EyeOff, Gift } from 'lucide-react';
+import { LogIn, UserPlus, Eye, EyeOff, Gift, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import { login } from '../store/authSlice';
 import { setCredits } from '../store/creditsSlice';
+import { supabase } from '../lib/supabase';
 
 export default function Auth({ mode }) {
   const isLogin = mode === 'login';
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Mock login/signup
-    dispatch(login({ name: 'Flávio', email: 'flavio@example.com' }));
-    if (!isLogin) {
-      dispatch(setCredits(5));
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) throw error;
+        
+        dispatch(login({ name: data.user.email, email: data.user.email }));
+        
+        // Fetch credits
+        const { data: profile } = await supabase.from('profiles').select('credits').eq('id', data.user.id).single();
+        if (profile) dispatch(setCredits(profile.credits));
+
+        navigate('/analise');
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        
+        if (error) throw error;
+        
+        dispatch(login({ name: data.user.email, email: data.user.email }));
+        dispatch(setCredits(5)); // Simulando que o trigger rodou
+        navigate('/analise');
+      }
+    } catch (err) {
+      setError(err.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : err.message);
+    } finally {
+      setLoading(false);
     }
-    navigate('/analise');
   };
 
   return (
@@ -43,12 +79,21 @@ export default function Auth({ mode }) {
           </p>
         </div>
 
+        {error && (
+          <div className="mb-4 bg-red-900/50 border border-red-800 text-red-400 text-caption p-3 rounded-md flex items-center gap-2">
+            <AlertCircle size={14} className="flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Input 
             type="email" 
             label="E-mail" 
             placeholder="seu@email.com" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
           
@@ -57,6 +102,8 @@ export default function Auth({ mode }) {
               type={showPassword ? 'text' : 'password'} 
               label="Senha" 
               placeholder="••••••••" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
             <button 
@@ -68,11 +115,11 @@ export default function Auth({ mode }) {
             </button>
           </div>
 
-          <Button variant="primary" className="w-full mt-2" type="submit">
+          <Button variant="primary" className="w-full mt-2" type="submit" disabled={loading}>
             {isLogin ? (
-              <><LogIn size={16} /> Entrar</>
+              <><LogIn size={16} /> {loading ? 'Entrando...' : 'Entrar'}</>
             ) : (
-              <><UserPlus size={16} /> Criar conta grátis</>
+              <><UserPlus size={16} /> {loading ? 'Criando...' : 'Criar conta grátis'}</>
             )}
           </Button>
         </form>
