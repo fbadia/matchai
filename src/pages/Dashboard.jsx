@@ -16,10 +16,10 @@ export default function Dashboard() {
   const [jobText, setJobText] = useState('');
   
   const loadingTexts = [
-    "Lendo sua candidatura...",
-    "Comparando com a vaga...",
-    "Calculando seu score...",
-    "A IA está trabalhando com mais atenção do que o RH vai ter..."
+    "Analisando palavra por palavra da vaga...",
+    "Identificando o que está faltando no seu currículo...",
+    "Preparando sugestões de melhoria...",
+    "Quase lá — estamos finalizando seu diagnóstico..."
   ];
 
   useEffect(() => {
@@ -46,30 +46,35 @@ export default function Dashboard() {
       
       {/* Page Header */}
       <div className="max-w-3xl mx-auto px-6 mb-10 text-center">
-        <h2 className="text-h2 text-text-primary">Olá, {user?.name?.split(' ')[0] || 'Usuário'}.</h2>
-        <h2 className="text-h2 text-violet-300">Pronto pra dar um nó no ATS?</h2>
-        <p className="text-body text-text-muted mt-3">
-          Cole a descrição da vaga e o texto do seu CV abaixo. O resto é com a gente.
+        <h2 className="text-h2 text-text-primary">
+          Olá, {user?.name?.split(' ')[0] || 'Usuário'}. <span className="text-violet-300">Qual vaga você quer analisar hoje?</span>
+        </h2>
+        <p className="text-body text-text-muted mt-3 max-w-2xl mx-auto">
+          Cole abaixo o texto da vaga que você quer e o texto do seu currículo. Em segundos você descobre se está no caminho certo — ou o que precisa ajustar.
         </p>
       </div>
 
       {/* Form Area */}
       <div className="max-w-5xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Textarea 
-            label={<><Briefcase size={14} className="mr-1.5" /> Descrição da vaga</>}
-            placeholder="Analista de Marketing Pleno | Experiência com SEO, Google Ads e..."
-            className="h-64"
-            value={jobText}
-            onChange={(e) => setJobText(e.target.value)}
-          />
-          <Textarea 
-            label={<><FileText size={14} className="mr-1.5" /> Seu currículo</>}
-            placeholder="Cole aqui o texto do seu currículo — sem formatação, só o conteúdo mesmo."
-            className="h-64"
-            value={cvText}
-            onChange={(e) => setCvText(e.target.value)}
-          />
+          <div>
+            <Textarea 
+              label={<><Briefcase size={14} className="mr-1.5 inline" /> Texto da vaga <span className="block text-xs font-normal text-text-disabled mt-1">*(Cole aqui a descrição completa da vaga — do LinkedIn, Indeed, ou onde você encontrou)*</span></>}
+              placeholder="Analista de Marketing Pleno — buscamos profissional com experiência em campanhas digitais, Google Ads, SEO..."
+              className="h-64 mt-2"
+              value={jobText}
+              onChange={(e) => setJobText(e.target.value)}
+            />
+          </div>
+          <div>
+            <Textarea 
+              label={<><FileText size={14} className="mr-1.5 inline" /> Seu currículo <span className="block text-xs font-normal text-text-disabled mt-1">*(Cole aqui o texto do seu currículo. Pode ser do Word, PDF ou Google Docs — só o texto mesmo, sem formatação)*</span></>}
+              placeholder="Profissional de marketing com 5 anos de experiência em gestão de campanhas digitais, com foco em performance e crescimento orgânico..."
+              className="h-64 mt-2"
+              value={cvText}
+              onChange={(e) => setCvText(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Action Area */}
@@ -95,9 +100,10 @@ export default function Dashboard() {
           ) : (
             <Card className="max-w-sm mx-auto text-center p-6 w-full">
               <AlertCircle size={24} className="text-gold-400 mb-3 mx-auto" />
-              <h3 className="text-label text-text-primary">Você usou todos os créditos.</h3>
+              <h3 className="text-label text-text-primary">Você usou todos os seus créditos.</h3>
               <p className="text-body text-text-muted mt-2 mb-4">
-                Boa notícia: R$ 10 resolve isso. Má notícia: o mercado de trabalho não.
+                Recarregue para continuar analisando — 10 créditos por R$ 10,00, sem mensalidade, sem compromisso.<br/>
+                <span className="block text-xs opacity-70 mt-2">*(Seus créditos nunca expiram, então não tem pressa.)*</span>
               </p>
               <Button variant="primary" className="w-full">
                 <Coins size={16} />

@@ -58,19 +58,26 @@ export default function ResultPremium() {
   return (
     <div className="min-h-screen bg-bg-deep pt-24 pb-16">
       {showToast && (
-        <Toast variant="info" message="Resultado recuperado do cache. Nenhum crédito foi debitado." />
+        <Toast variant="info" message="Você já analisou este par currículo + vaga recentemente. Estamos mostrando o resultado anterior — nenhum crédito foi descontado." />
       )}
       
       {/* Header */}
       <div className="max-w-3xl mx-auto px-6 mb-8 text-center">
         <Badge variant={data.nivel_match === 'alto' ? 'high' : data.nivel_match === 'medio' ? 'medium' : 'low'} className="mb-4">
-          Match {data.nivel_match}
+          {data.nivel_match === 'alto' ? '✅ Boa compatibilidade' : data.nivel_match === 'medio' ? '⚠️ Compatibilidade parcial' : '❌ Baixa compatibilidade'}
         </Badge>
         <div className="mt-2">
           <span className="text-[96px] font-medium text-violet-300 leading-none">{data.score_geral}</span>
           <p className="text-caption text-text-disabled mt-2">Score de compatibilidade</p>
         </div>
-        <p className="text-body text-text-muted mt-4 max-w-lg mx-auto">
+        <p className="text-body font-medium text-text-primary mt-4 max-w-xl mx-auto">
+          {data.score_geral >= 75 
+            ? "Seu currículo está bem alinhado com esta vaga. As chances de passar pelo filtro automático são boas — mas ainda dá para melhorar alguns pontos antes de enviar." 
+            : data.score_geral >= 50 
+              ? "Seu currículo tem potencial para esta vaga, mas ainda faltam alguns elementos importantes que o filtro automático vai procurar. Confira o que está faltando abaixo." 
+              : "Seu currículo, da forma como está, tem poucas chances de passar pelo filtro automático desta vaga. A boa notícia: a gente identificou exatamente o que precisa mudar."}
+        </p>
+        <p className="text-body text-text-muted mt-2 max-w-lg mx-auto">
           {data.resumo}
         </p>
         <div className="flex gap-2 justify-center mt-4">
@@ -136,7 +143,8 @@ export default function ResultPremium() {
                         </div>
                       </div>
                       <div>
-                        <h4 className="text-micro uppercase text-text-disabled mb-2">Ausentes no CV</h4>
+                        <h4 className="text-micro font-semibold text-text-primary mb-1">Palavras e habilidades que a vaga pede mas não estão no seu currículo</h4>
+                        <p className="text-caption text-text-disabled mb-3">*(São exatamente essas que o filtro automático vai procurar)*</p>
                         <div className="flex flex-wrap gap-2">
                           {dim.missing?.length ? dim.missing.map((k, idx) => <Tag key={idx} type="gap">{k}</Tag>) : <span className="text-caption text-text-disabled">-</span>}
                         </div>
@@ -145,14 +153,20 @@ export default function ResultPremium() {
                   )}
 
                   {dim.hasGaps && dim.gaps && dim.gaps.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {dim.gaps.map((g, idx) => <Tag key={idx} type="gap">{g}</Tag>)}
+                    <div className="mt-4">
+                      <h4 className="text-micro font-semibold text-text-primary mb-2">Pontos de atenção identificados</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {dim.gaps.map((g, idx) => <Tag key={idx} type="gap">{g}</Tag>)}
+                      </div>
                     </div>
                   )}
 
                   {dim.hasSuggestions && dim.suggestions && dim.suggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {dim.suggestions.map((s, idx) => <Tag key={idx} type="suggestion">{s}</Tag>)}
+                    <div className="mt-4">
+                      <h4 className="text-micro font-semibold text-text-primary mb-2">Como melhorar antes de enviar</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {dim.suggestions.map((s, idx) => <Tag key={idx} type="suggestion">{s}</Tag>)}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -164,8 +178,8 @@ export default function ResultPremium() {
 
       {/* Optimized Bullets */}
       <div className="max-w-2xl mx-auto px-6 mb-10">
-        <h3 className="text-h3 text-text-primary mb-1">Versão turbinada para esta vaga</h3>
-        <p className="text-caption text-text-disabled mb-6">Sugestões geradas pela IA para melhorar seus tópicos.</p>
+        <h3 className="text-h3 text-text-primary mb-1">Sugestões de reescrita para esta vaga</h3>
+        <p className="text-caption text-text-disabled mb-6">Pegamos frases do seu currículo e sugerimos versões mais alinhadas com o que esta vaga pede. Use como quiser — a decisão final é sempre sua.</p>
         
         <div className="space-y-4">
           {data.bullets_otimizados?.map((bullet, i) => (
@@ -191,9 +205,16 @@ export default function ResultPremium() {
           <FileDown size={16} />
           Baixar CV otimizado — PDF
         </Button>
-        <p className="text-caption text-text-disabled mt-3">
+        <p className="text-caption text-text-disabled mt-3 mb-6">
           O PDF será gerado com as sugestões aplicadas ao seu currículo original. (Em breve)
         </p>
+        
+        <div className="p-4 bg-bg-surface border border-border-default rounded-md text-left">
+          <p className="text-caption text-text-muted">
+            <AlertCircle size={14} className="inline mr-1.5 text-violet-400" />
+            Todas as sugestões são baseadas no que você já escreveu no seu currículo. Não inventamos experiências, não exageramos conquistas. Só ajudamos você a apresentar melhor o que já é seu.
+          </p>
+        </div>
       </div>
 
     </div>

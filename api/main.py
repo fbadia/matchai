@@ -26,7 +26,7 @@ class AnalyzeRequest(BaseModel):
     @validator('cv_text', 'job_text')
     def min_length(cls, v):
         if len(v.strip()) < 100:
-            raise ValueError('Texto deve ter no mínimo 100 caracteres.')
+            raise ValueError('O texto está muito curto para uma análise precisa. Cole a descrição completa da vaga e do currículo para um resultado mais útil.')
         return v
 
 def normalize_text(text: str) -> str:
