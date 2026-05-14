@@ -48,7 +48,8 @@ export function useAnalyze() {
       navigate('/resultado?tier=premium', { 
         state: { 
           from_cache: response.from_cache, 
-          cached_at: response.cached_at 
+          cached_at: response.cached_at,
+          data: response // entire gemini generated payload
         } 
       });
       

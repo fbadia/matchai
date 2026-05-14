@@ -5,6 +5,8 @@ from supabase import create_client
 from datetime import datetime, timedelta
 import hashlib
 import os
+import json
+import google.generativeai as genai
 
 app = FastAPI(title="MatchAI API")
 
@@ -52,13 +54,81 @@ async def get_current_user(authorization: str = Header(None)):
     return {"id": user_res.user.id}
 
 async def call_gemini_premium(cv_text: str, job_text: str):
-    return {
-        "score_geral": 85,
-        "resumo": "Análise mockada do Gemini.",
-        "nivel_match": "alto",
-        "dimensoes": {},
-        "bullets_otimizados": []
-    }
+    if "GEMINI_API_KEY" not in os.environ:
+        raise HTTPException(status_code=500, detail="Serviço indisponível. Variável GEMINI_API_KEY ausente.")
+
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    
+    model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+    
+    prompt = f"""
+    Você é um especialista em Recrutamento (ATS) e análise de currículos.
+    Analise o seguinte Currículo e compare-o com a Descrição da Vaga.
+    
+    VAGA:
+    {job_text}
+    
+    CURRÍCULO:
+    {cv_text}
+    
+    Retorne a análise ESTRITAMENTE em formato JSON com a seguinte estrutura, sem nenhum outro texto ao redor:
+    {{
+        "score_geral": inteiro (0 a 100 indicando a compatibilidade),
+        "resumo": "Texto curto resumindo a análise geral em 2 ou 3 frases.",
+        "nivel_match": "alto" | "medio" | "baixo",
+        "dimensoes": [
+            {{
+                "id": "Parsing",
+                "score": inteiro (0 a 100),
+                "desc": "Análise sobre como um sistema ATS conseguiria ler os dados do CV",
+                "hasKeywords": false,
+                "hasGaps": false,
+                "hasSuggestions": false
+            }},
+            {{
+                "id": "Keywords",
+                "score": inteiro (0 a 100),
+                "desc": "Análise sobre aderência de palavras-chave da vaga no currículo",
+                "hasKeywords": true,
+                "found": ["Palavra1", "Palavra2"],
+                "missing": ["Faltando1", "Faltando2"]
+            }},
+            {{
+                "id": "Estrutura",
+                "score": inteiro (0 a 100),
+                "desc": "Análise sobre estrutura e ordem cronológica do CV"
+            }},
+            {{
+                "id": "Métricas",
+                "score": inteiro (0 a 100),
+                "desc": "Avaliação sobre os resultados numéricos apresentados no CV",
+                "hasSuggestions": true,
+                "suggestions": ["Sugestão 1 de melhoria", "Sugestão 2"]
+            }},
+            {{
+                "id": "Gaps",
+                "score": inteiro (0 a 100),
+                "desc": "Avaliação sobre lacunas de tempo não explicadas no histórico",
+                "hasGaps": true,
+                "gaps": ["Gap detectado 1"]
+            }}
+        ],
+        "bullets_otimizados": [
+            {{
+                "original": "Texto do bullet point original do CV.",
+                "otimizado": "Texto reescrito com verbos de ação, focado em métricas ou nas palavras da vaga."
+            }}
+        ]
+    }}
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        result_json = json.loads(response.text)
+        return result_json
+    except Exception as e:
+        print("Gemini API Error:", str(e))
+        raise Exception("Erro ao processar análise no Gemini")
 
 @app.post("/api/analyze/premium")
 async def analyze_premium(

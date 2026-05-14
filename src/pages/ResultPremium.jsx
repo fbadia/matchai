@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import { History, ScanText, Tag as TagIcon, LayoutList, BarChart2, AlertCircle, ChevronDown, FileDown } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge, Tag } from '../components/ui/Badge';
@@ -8,10 +8,11 @@ import { Toast } from '../components/ui/Toast';
 
 export default function ResultPremium() {
   const location = useLocation();
-  const [openAccordion, setOpenAccordion] = useState('Keywords');
+  const [openAccordion, setOpenAccordion] = useState('Parsing');
   const [showToast, setShowToast] = useState(false);
   
   const fromCache = location.state?.from_cache || false;
+  const data = location.state?.data;
 
   useEffect(() => {
     if (fromCache) {
@@ -21,13 +22,34 @@ export default function ResultPremium() {
     }
   }, [fromCache]);
 
-  const dimensions = [
-    { id: 'Parsing', icon: ScanText, score: 80, color: 'bg-emerald-400', desc: 'Seu CV foi lido sem problemas pelo sistema.' },
-    { id: 'Keywords', icon: TagIcon, score: 65, color: 'bg-violet-500', desc: 'Faltam palavras-chave cruciais da descrição da vaga.', hasKeywords: true },
-    { id: 'Estrutura', icon: LayoutList, score: 90, color: 'bg-emerald-400', desc: 'Boa organização cronológica e de seções.' },
-    { id: 'Métricas', icon: BarChart2, score: 50, color: 'bg-gold-400', desc: 'Poucos resultados quantificados. Adicione números.', hasSuggestions: true },
-    { id: 'Gaps', icon: AlertCircle, score: 70, color: 'bg-violet-500', desc: 'Período sem atividade detectado.', hasGaps: true },
-  ];
+  if (!data) {
+    return <Navigate to="/analise" />;
+  }
+
+  // Mapeia os ícones dinamicamente pelo ID retornado do Gemini
+  const getIconForDimension = (id) => {
+    switch(id) {
+      case 'Parsing': return ScanText;
+      case 'Keywords': return TagIcon;
+      case 'Estrutura': return LayoutList;
+      case 'Métricas': return BarChart2;
+      case 'Gaps': return AlertCircle;
+      default: return ScanText;
+    }
+  };
+
+  // Define as cores com base na nota para dar o ar premium
+  const getColorForScore = (score) => {
+    if (score >= 80) return 'bg-emerald-400';
+    if (score >= 50) return 'bg-gold-400';
+    return 'bg-violet-500'; // ou red, mas o PRD pede manter na paleta
+  };
+
+  const dimensions = data.dimensoes?.map(d => ({
+    ...d,
+    icon: getIconForDimension(d.id),
+    color: getColorForScore(d.score)
+  })) || [];
 
   const toggleAccordion = (id) => {
     setOpenAccordion(openAccordion === id ? null : id);
@@ -41,13 +63,15 @@ export default function ResultPremium() {
       
       {/* Header */}
       <div className="max-w-3xl mx-auto px-6 mb-8 text-center">
-        <Badge variant="high" className="mb-4">Você está no jogo.</Badge>
+        <Badge variant={data.nivel_match === 'alto' ? 'high' : data.nivel_match === 'medio' ? 'medium' : 'low'} className="mb-4">
+          Match {data.nivel_match}
+        </Badge>
         <div className="mt-2">
-          <span className="text-[96px] font-medium text-violet-300 leading-none">74</span>
+          <span className="text-[96px] font-medium text-violet-300 leading-none">{data.score_geral}</span>
           <p className="text-caption text-text-disabled mt-2">Score de compatibilidade</p>
         </div>
         <p className="text-body text-text-muted mt-4 max-w-lg mx-auto">
-          Seu currículo passa pelo ATS, mas você ainda está perdendo pontos valiosos em estrutura e gaps não explicados.
+          {data.resumo}
         </p>
         <div className="flex gap-2 justify-center mt-4">
           <span className="inline-flex items-center gap-1.5 bg-emerald-900 border border-emerald-800 text-emerald-400 text-caption px-3 py-1 rounded-full font-medium">Análise concluída</span>
@@ -108,29 +132,27 @@ export default function ResultPremium() {
                       <div className="mb-4">
                         <h4 className="text-micro uppercase text-text-disabled mb-2">Encontradas no CV</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Tag type="keyword">SEO</Tag>
-                          <Tag type="keyword">Google Analytics</Tag>
+                          {dim.found?.length ? dim.found.map((k, idx) => <Tag key={idx} type="keyword">{k}</Tag>) : <span className="text-caption text-text-disabled">-</span>}
                         </div>
                       </div>
                       <div>
                         <h4 className="text-micro uppercase text-text-disabled mb-2">Ausentes no CV</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Tag type="gap">Google Ads</Tag>
-                          <Tag type="gap">A/B Testing</Tag>
+                          {dim.missing?.length ? dim.missing.map((k, idx) => <Tag key={idx} type="gap">{k}</Tag>) : <span className="text-caption text-text-disabled">-</span>}
                         </div>
                       </div>
                     </>
                   )}
 
-                  {dim.hasGaps && (
+                  {dim.hasGaps && dim.gaps && dim.gaps.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      <Tag type="gap">Gap de 6 meses (2023)</Tag>
+                      {dim.gaps.map((g, idx) => <Tag key={idx} type="gap">{g}</Tag>)}
                     </div>
                   )}
 
-                  {dim.hasSuggestions && (
+                  {dim.hasSuggestions && dim.suggestions && dim.suggestions.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      <Tag type="suggestion">Use verbos de ação + número + resultado.</Tag>
+                      {dim.suggestions.map((s, idx) => <Tag key={idx} type="suggestion">{s}</Tag>)}
                     </div>
                   )}
                 </div>
@@ -143,21 +165,23 @@ export default function ResultPremium() {
       {/* Optimized Bullets */}
       <div className="max-w-2xl mx-auto px-6 mb-10">
         <h3 className="text-h3 text-text-primary mb-1">Versão turbinada para esta vaga</h3>
-        <p className="text-caption text-text-disabled mb-6">Baseado no que você já escreveu. Nenhuma experiência foi inventada.</p>
+        <p className="text-caption text-text-disabled mb-6">Sugestões geradas pela IA para melhorar seus tópicos.</p>
         
         <div className="space-y-4">
-          <Card className="p-0 overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border-default">
-              <div className="p-4">
-                <div className="text-micro uppercase text-text-disabled mb-2">Original</div>
-                <p className="text-body text-text-muted">Fiz campanhas de marketing usando SEO e consegui mais acessos no site.</p>
+          {data.bullets_otimizados?.map((bullet, i) => (
+            <Card key={i} className="p-0 overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border-default">
+                <div className="p-4">
+                  <div className="text-micro uppercase text-text-disabled mb-2">Original</div>
+                  <p className="text-body text-text-muted">{bullet.original}</p>
+                </div>
+                <div className="p-4 bg-bg-surface2">
+                  <div className="text-micro uppercase text-violet-300 mb-2">Otimizado</div>
+                  <p className="text-body text-text-primary">{bullet.otimizado}</p>
+                </div>
               </div>
-              <div className="p-4 bg-bg-surface2">
-                <div className="text-micro uppercase text-violet-300 mb-2">Otimizado</div>
-                <p className="text-body text-text-primary">Aumentou o tráfego orgânico em 40% em 6 meses implementando estratégias de SEO focadas em conversão.</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          ))}
         </div>
       </div>
 
@@ -168,7 +192,7 @@ export default function ResultPremium() {
           Baixar CV otimizado — PDF
         </Button>
         <p className="text-caption text-text-disabled mt-3">
-          O PDF será gerado com as sugestões aplicadas ao seu currículo original.
+          O PDF será gerado com as sugestões aplicadas ao seu currículo original. (Em breve)
         </p>
       </div>
 
