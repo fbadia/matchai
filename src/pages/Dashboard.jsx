@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Briefcase, FileText, Zap, Coins, AlertCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Input';
+import { useAnalyze } from '../hooks/useAnalyze';
 
 export default function Dashboard() {
   const { user } = useSelector(state => state.auth);
   const { balance } = useSelector(state => state.credits);
-  const [loading, setLoading] = useState(false);
+  
+  const { analyzePremium, loading, error } = useAnalyze();
   const [loadingText, setLoadingText] = useState('');
+  const [cvText, setCvText] = useState('');
+  const [jobText, setJobText] = useState('');
   
   const loadingTexts = [
     "Lendo sua candidatura...",
@@ -18,20 +22,23 @@ export default function Dashboard() {
     "A IA está trabalhando com mais atenção do que o RH vai ter..."
   ];
 
+  useEffect(() => {
+    if (loading) {
+      let step = 0;
+      setLoadingText(loadingTexts[step]);
+      
+      const interval = setInterval(() => {
+        step++;
+        if (step < loadingTexts.length) {
+          setLoadingText(loadingTexts[step]);
+        }
+      }, 1000); // reduced to 1000 for realistic 3s sync
+      return () => clearInterval(interval);
+    }
+  }, [loading]);
+
   const handleAnalyze = () => {
-    setLoading(true);
-    let step = 0;
-    setLoadingText(loadingTexts[step]);
-    
-    const interval = setInterval(() => {
-      step++;
-      if (step < loadingTexts.length) {
-        setLoadingText(loadingTexts[step]);
-      } else {
-        clearInterval(interval);
-        window.location.href = '/resultado?tier=premium';
-      }
-    }, 3000);
+    analyzePremium(cvText, jobText);
   };
 
   return (
@@ -53,11 +60,15 @@ export default function Dashboard() {
             label={<><Briefcase size={14} className="mr-1.5" /> Descrição da vaga</>}
             placeholder="Analista de Marketing Pleno | Experiência com SEO, Google Ads e..."
             className="h-64"
+            value={jobText}
+            onChange={(e) => setJobText(e.target.value)}
           />
           <Textarea 
             label={<><FileText size={14} className="mr-1.5" /> Seu currículo</>}
             placeholder="Cole aqui o texto do seu currículo — sem formatação, só o conteúdo mesmo."
             className="h-64"
+            value={cvText}
+            onChange={(e) => setCvText(e.target.value)}
           />
         </div>
 

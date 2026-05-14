@@ -1,11 +1,25 @@
-import { useState } from 'react';
-import { ScanText, Tag as TagIcon, LayoutList, BarChart2, AlertCircle, ChevronDown, FileDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { History, ScanText, Tag as TagIcon, LayoutList, BarChart2, AlertCircle, ChevronDown, FileDown } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge, Tag } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
+import { Toast } from '../components/ui/Toast';
 
 export default function ResultPremium() {
+  const location = useLocation();
   const [openAccordion, setOpenAccordion] = useState('Keywords');
+  const [showToast, setShowToast] = useState(false);
+  
+  const fromCache = location.state?.from_cache || false;
+
+  useEffect(() => {
+    if (fromCache) {
+      setShowToast(true);
+      const timer = setTimeout(() => setShowToast(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [fromCache]);
 
   const dimensions = [
     { id: 'Parsing', icon: ScanText, score: 80, color: 'bg-emerald-400', desc: 'Seu CV foi lido sem problemas pelo sistema.' },
@@ -21,6 +35,9 @@ export default function ResultPremium() {
 
   return (
     <div className="min-h-screen bg-bg-deep pt-24 pb-16">
+      {showToast && (
+        <Toast variant="info" message="Resultado recuperado do cache. Nenhum crédito foi debitado." />
+      )}
       
       {/* Header */}
       <div className="max-w-3xl mx-auto px-6 mb-8 text-center">
@@ -35,6 +52,12 @@ export default function ResultPremium() {
         <div className="flex gap-2 justify-center mt-4">
           <span className="inline-flex items-center gap-1.5 bg-emerald-900 border border-emerald-800 text-emerald-400 text-caption px-3 py-1 rounded-full font-medium">Análise concluída</span>
           <span className="inline-flex items-center gap-1.5 bg-gold-900 border border-gold-800 text-gold-400 text-caption px-3 py-1 rounded-full font-medium">1 crédito utilizado</span>
+          {fromCache && (
+            <span className="inline-flex items-center gap-1.5 bg-blue-900 border border-blue-800 text-blue-400 text-caption px-3 py-1 rounded-full font-medium">
+              <History size={12} />
+              Resultado do cache &middot; sem débito
+            </span>
+          )}
         </div>
       </div>
 
